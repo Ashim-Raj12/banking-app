@@ -15,6 +15,8 @@ export default function App() {
   const [scannedData, setScannedData] = useState(null);
   const [amount, setAmount] = useState("");
   const [transactionId, setTransactionId] = useState("");
+  const [showDebitDetails, setShowDebitDetails] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [qrScanner, setQrScanner] = useState(null);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -117,17 +119,16 @@ export default function App() {
 
   const handlePayment = () => {
     if (amount && parseFloat(amount) > 0) {
+      setIsProcessing(true);
       const txnId = "TXN" + Date.now().toString().slice(-10);
       setTransactionId(txnId);
-      setCurrentPage("success");
+      setShowDebitDetails(true);
 
-      // Reset after 3 seconds but stay on success page
+      // Show success page after 1.5 seconds
       setTimeout(() => {
-        setAmount("");
-        setScannedData(null);
-        setTransactionId("");
+        setIsProcessing(false);
         setCurrentPage("success");
-      }, 3000);
+      }, 1500);
     }
   };
 
@@ -136,7 +137,7 @@ export default function App() {
       {/* Header */}
       <div className="bg-white/10 backdrop-blur-md text-white p-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">PayApp</h1>
+          <h1 className="text-2xl font-bold">BHIM UPI</h1>
           <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full">
             <Wallet size={20} />
             <span className="font-semibold">₹10,000</span>
@@ -295,19 +296,19 @@ export default function App() {
 
         <div className="bg-white rounded-3xl p-8 max-w-md mx-auto">
           <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">
-            My QR Code
+            Receive Money
           </h2>
-          <p className="text-gray-600 mb-6 text-center">Scan to pay me</p>
+          <p className="text-gray-600 mb-6 text-center">Show this QR code to receive payment</p>
 
-          <div className="bg-gradient-to-br from-purple-100 to-blue-100 p-8 rounded-2xl mb-6">
+          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-8 rounded-2xl mb-6">
             <div className="bg-white p-6 rounded-xl">
               <QrCode size={200} className="mx-auto text-gray-800" />
             </div>
           </div>
 
           <div className="text-center">
-            <p className="text-lg font-bold text-gray-800">yourname@upi</p>
-            <p className="text-sm text-gray-600">Your UPI ID</p>
+            <p className="text-lg font-bold text-gray-800">ashimraj@indusind</p>
+            <p className="text-sm text-gray-600">UPI ID</p>
           </div>
         </div>
       </div>
@@ -327,11 +328,11 @@ export default function App() {
 
         <div className="bg-white rounded-3xl p-8 max-w-md mx-auto">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-3xl font-bold">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-3xl font-bold">
               {scannedData?.name?.charAt(0)}
             </div>
             <h2 className="text-xl font-bold text-gray-800">
-              {scannedData?.name}
+              Pay {scannedData?.name}
             </h2>
             <p className="text-sm text-gray-600">{scannedData?.upi}</p>
           </div>
@@ -368,10 +369,17 @@ export default function App() {
 
           <button
             onClick={handlePayment}
-            disabled={!amount || parseFloat(amount) <= 0}
+            disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Pay Now
+            {isProcessing ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Processing...
+              </div>
+            ) : (
+              "Pay Now"
+            )}
           </button>
         </div>
       </div>
@@ -380,42 +388,51 @@ export default function App() {
 
   const renderSuccessPage = () => (
     <div className="min-h-screen bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center">
+        <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center">
         <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
           <Check size={48} className="text-green-600" />
         </div>
 
         <h2 className="text-3xl font-bold text-gray-800 mb-2">
-          Payment Successful!
+          Payment Successful
         </h2>
-        <p className="text-gray-600 mb-8">Your payment has been processed</p>
+        <p className="text-gray-600 mb-8">Money sent successfully</p>
 
         <div className="bg-gray-50 rounded-2xl p-6 mb-6">
           <div className="flex justify-between mb-4">
-            <span className="text-gray-600">Amount Paid</span>
+            <span className="text-gray-600">Amount</span>
             <span className="text-2xl font-bold text-gray-800">₹{amount}</span>
           </div>
           <div className="flex justify-between mb-4">
-            <span className="text-gray-600">To</span>
+            <span className="text-gray-600">Sent to</span>
             <span className="font-semibold text-gray-800">
               {scannedData?.name}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Transaction ID</span>
+          <div className="flex justify-between mb-4">
+            <span className="text-gray-600">UPI Transaction ID</span>
             <span className="text-sm font-mono text-gray-800">
               {transactionId}
             </span>
           </div>
+          {showDebitDetails && (
+            <div className="border-t pt-4 mt-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">From</span>
+                <span className="font-semibold text-gray-800">Ashim Raj</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Bank</span>
+                <span className="font-semibold text-gray-800">
+                  IndusInd Bank
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <button
-          onClick={() => {
-            setCurrentPage("home");
-            setAmount("");
-            setScannedData(null);
-            setTransactionId("");
-          }}
+          onClick={() => setCurrentPage("home")}
           className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all"
         >
           Done
