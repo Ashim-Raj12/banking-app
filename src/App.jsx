@@ -18,6 +18,7 @@ export default function App() {
   const [showDebitDetails, setShowDebitDetails] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [qrScanner, setQrScanner] = useState(null);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
 
@@ -27,11 +28,11 @@ export default function App() {
     { id: 3, name: "Restaurant XYZ", upi: "restaurant@ybl" },
   ];
 
-  const recentTransactions = [
-    { id: 1, name: "John Doe", amount: 500, time: "2 hours ago" },
-    { id: 2, name: "Coffee Shop", amount: 250, time: "Yesterday" },
-    { id: 3, name: "Grocery Store", amount: 1200, time: "2 days ago" },
-  ];
+  const [recentTransactions, setRecentTransactions] = useState([
+    { id: 1, name: "John Doe", amount: 500, time: "2 hours ago", date: "2024-01-15", upiId: "johndoe@paytm", type: "sent" },
+    { id: 2, name: "Coffee Shop", amount: 250, time: "Yesterday", date: "2024-01-14", upiId: "coffee@paytm", type: "sent" },
+    { id: 3, name: "Grocery Store", amount: 1200, time: "2 days ago", date: "2024-01-13", upiId: "grocery@okaxis", type: "sent" },
+  ]);
 
   const handleScanQR = () => {
     setCurrentPage("scan");
@@ -128,22 +129,41 @@ export default function App() {
       setTimeout(() => {
         setIsProcessing(false);
         setCurrentPage("success");
+
+        // Add to recent transactions
+        const newTransaction = {
+          id: Date.now(),
+          name: scannedData?.name || "Unknown Merchant",
+          amount: parseFloat(amount),
+          time: "Just now",
+          date: new Date().toISOString().split('T')[0],
+          upiId: scannedData?.upi || "unknown@upi",
+          type: "sent",
+          txnId: txnId,
+          timestamp: new Date().toISOString(),
+          senderUpi: "ashimraj@indusind",
+          senderName: "Ashim Raj",
+          bank: "IndusInd Bank"
+        };
+        setRecentTransactions(prev => [newTransaction, ...prev.slice(0, 9)]); // Keep only last 10
       }, 1500);
     }
   };
 
   const renderHomePage = () => (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-indigo-700">
       {/* Header */}
       <div className="bg-white/10 backdrop-blur-md text-white p-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">BHIM UPI</h1>
+          <div>
+            <h1 className="text-2xl font-bold">BHIM UPI</h1>
+            <p className="text-sm text-white/80">Ashim Raj • ashimraj@indusind</p>
+          </div>
           <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full">
             <Wallet size={20} />
             <span className="font-semibold">₹10,000</span>
           </div>
         </div>
-        <p className="text-sm text-white/80">Welcome back!</p>
       </div>
 
       {/* Quick Actions */}
@@ -204,17 +224,29 @@ export default function App() {
           </h2>
           <div className="space-y-3">
             {recentTransactions.map((txn) => (
-              <div key={txn.id} className="flex items-center justify-between">
+              <div
+                key={txn.id}
+                onClick={() => setSelectedTransaction(txn)}
+                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-all cursor-pointer"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <Clock size={20} className="text-gray-600" />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                    txn.type === 'sent' ? 'bg-red-500' : 'bg-green-500'
+                  }`}>
+                    {txn.name.charAt(0)}
                   </div>
                   <div>
                     <p className="font-semibold text-gray-800">{txn.name}</p>
-                    <p className="text-sm text-gray-500">{txn.time}</p>
+                    <p className="text-sm text-gray-500">{txn.upiId}</p>
+                    <p className="text-xs text-gray-400">{txn.time} • {txn.date}</p>
                   </div>
                 </div>
-                <p className="font-bold text-gray-800">₹{txn.amount}</p>
+                <div className="text-right">
+                  <p className={`font-bold ${txn.type === 'sent' ? 'text-red-600' : 'text-green-600'}`}>
+                    {txn.type === 'sent' ? '-' : '+'}₹{txn.amount}
+                  </p>
+                  <p className="text-xs text-gray-400 uppercase">{txn.type}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -284,7 +316,7 @@ export default function App() {
   );
 
   const renderQRCodePage = () => (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-indigo-700">
       <div className="p-6">
         <button
           onClick={() => setCurrentPage("home")}
@@ -316,7 +348,7 @@ export default function App() {
   );
 
   const renderEnterAmountPage = () => (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-indigo-700">
       <div className="p-6">
         <button
           onClick={() => setCurrentPage("home")}
@@ -370,7 +402,7 @@ export default function App() {
           <button
             onClick={handlePayment}
             disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessing ? (
               <div className="flex items-center justify-center gap-2">
@@ -399,41 +431,51 @@ export default function App() {
         <p className="text-gray-600 mb-8">Money sent successfully</p>
 
         <div className="bg-gray-50 rounded-2xl p-6 mb-6">
-          <div className="flex justify-between mb-4">
-            <span className="text-gray-600">Amount</span>
-            <span className="text-2xl font-bold text-gray-800">₹{amount}</span>
-          </div>
-          <div className="flex justify-between mb-4">
-            <span className="text-gray-600">Sent to</span>
-            <span className="font-semibold text-gray-800">
-              {scannedData?.name}
-            </span>
-          </div>
-          <div className="flex justify-between mb-4">
-            <span className="text-gray-600">UPI Transaction ID</span>
-            <span className="text-sm font-mono text-gray-800">
-              {transactionId}
-            </span>
-          </div>
-          {showDebitDetails && (
-            <div className="border-t pt-4 mt-4">
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">From</span>
-                <span className="font-semibold text-gray-800">Ashim Raj</span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">
+                {scannedData?.name?.charAt(0)}
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Bank</span>
-                <span className="font-semibold text-gray-800">
-                  IndusInd Bank
-                </span>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800">{scannedData?.name}</p>
+                <p className="text-sm text-gray-500">{scannedData?.upi}</p>
               </div>
             </div>
-          )}
+            <div className="text-right">
+              <p className="text-2xl font-bold text-red-600">-₹{amount}</p>
+              <p className="text-xs text-gray-400 uppercase">sent</p>
+            </div>
+          </div>
+
+          <div className="border-t pt-4 space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Transaction ID</span>
+              <span className="text-sm font-mono text-gray-800">{transactionId}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Date & Time</span>
+              <span className="text-sm text-gray-800">
+                {new Date().toLocaleDateString()} • {new Date().toLocaleTimeString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">From Account</span>
+              <div className="text-right">
+                <p className="font-semibold text-gray-800">Ashim Raj</p>
+                <p className="text-sm text-gray-500">ashimraj@indusind</p>
+                <p className="text-xs text-gray-400">IndusInd Bank</p>
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Reference</span>
+              <span className="text-sm text-gray-800">UPI Payment</span>
+            </div>
+          </div>
         </div>
 
         <button
           onClick={() => setCurrentPage("home")}
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all"
+          className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all"
         >
           Done
         </button>
@@ -441,13 +483,92 @@ export default function App() {
     </div>
   );
 
+  const renderTransactionDetailsPage = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-indigo-700">
+      <div className="p-6">
+        <button
+          onClick={() => setSelectedTransaction(null)}
+          className="flex items-center gap-2 text-white mb-6"
+        >
+          <ArrowLeft size={24} />
+          <span>Back</span>
+        </button>
+
+        <div className="bg-white rounded-3xl p-8 max-w-md mx-auto">
+          <div className="text-center mb-6">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold ${
+              selectedTransaction?.type === 'sent' ? 'bg-red-500' : 'bg-green-500'
+            }`}>
+              {selectedTransaction?.name?.charAt(0)}
+            </div>
+            <h2 className="text-xl font-bold text-gray-800">
+              {selectedTransaction?.type === 'sent' ? 'Money Sent' : 'Money Received'}
+            </h2>
+            <p className="text-sm text-gray-600">{selectedTransaction?.name}</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Amount</span>
+              <span className={`text-2xl font-bold ${
+                selectedTransaction?.type === 'sent' ? 'text-red-600' : 'text-green-600'
+              }`}>
+                {selectedTransaction?.type === 'sent' ? '-' : '+'}₹{selectedTransaction?.amount}
+              </span>
+            </div>
+
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Transaction ID</span>
+                <span className="text-sm font-mono text-gray-800">{selectedTransaction?.txnId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Date & Time</span>
+                <span className="text-sm text-gray-800">
+                  {selectedTransaction?.timestamp ? new Date(selectedTransaction.timestamp).toLocaleString() : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">UPI ID</span>
+                <span className="text-sm text-gray-800">{selectedTransaction?.upiId}</span>
+              </div>
+              {selectedTransaction?.type === 'sent' && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">From</span>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-800">{selectedTransaction?.senderName}</p>
+                      <p className="text-sm text-gray-500">{selectedTransaction?.senderUpi}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Bank</span>
+                    <span className="font-semibold text-gray-800">{selectedTransaction?.bank}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status</span>
+                <span className="text-sm font-semibold text-green-600">SUCCESSFUL</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="font-sans">
-      {currentPage === "home" && renderHomePage()}
-      {currentPage === "scan" && renderScanPage()}
-      {currentPage === "qr-code" && renderQRCodePage()}
-      {currentPage === "enter-amount" && renderEnterAmountPage()}
-      {currentPage === "success" && renderSuccessPage()}
+      {selectedTransaction ? renderTransactionDetailsPage() : (
+        <>
+          {currentPage === "home" && renderHomePage()}
+          {currentPage === "scan" && renderScanPage()}
+          {currentPage === "qr-code" && renderQRCodePage()}
+          {currentPage === "enter-amount" && renderEnterAmountPage()}
+          {currentPage === "success" && renderSuccessPage()}
+        </>
+      )}
     </div>
   );
 }
