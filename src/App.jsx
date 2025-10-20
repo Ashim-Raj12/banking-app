@@ -15,7 +15,9 @@ export default function App() {
   const [scannedData, setScannedData] = useState(null);
   const [amount, setAmount] = useState("");
   const [transactionId, setTransactionId] = useState("");
+  const [qrScanner, setQrScanner] = useState(null);
   const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
 
   const demoQRCodes = [
     { id: 1, name: "Starbucks Coffee", upi: "starbucks@paytm" },
@@ -30,7 +32,42 @@ export default function App() {
   ];
 
   const handleScanQR = () => {
-    fileInputRef.current?.click();
+    setCurrentPage("scan");
+  };
+
+  const startCameraScan = async () => {
+    try {
+      const scanner = new QrScanner(
+        videoRef.current,
+        (result) => {
+          const upiData = parseUPI(result.data);
+          if (upiData) {
+            setScannedData(upiData);
+            scanner.stop();
+            setCurrentPage("enter-amount");
+          } else {
+            alert("Invalid QR code. Please scan a valid UPI payment QR code.");
+          }
+        },
+        {
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+        }
+      );
+      await scanner.start();
+      setQrScanner(scanner);
+    } catch (error) {
+      console.error("Error starting camera:", error);
+      alert("Failed to access camera. Please upload a QR image instead.");
+      fileInputRef.current?.click();
+    }
+  };
+
+  const stopCameraScan = () => {
+    if (qrScanner) {
+      qrScanner.stop();
+      setQrScanner(null);
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -84,12 +121,12 @@ export default function App() {
       setTransactionId(txnId);
       setCurrentPage("success");
 
-      // Reset after 3 seconds
+      // Reset after 3 seconds but stay on success page
       setTimeout(() => {
-        setCurrentPage("home");
         setAmount("");
         setScannedData(null);
         setTransactionId("");
+        setCurrentPage("success");
       }, 3000);
     }
   };
@@ -189,7 +226,10 @@ export default function App() {
     <div className="min-h-screen bg-gray-900">
       <div className="p-6">
         <button
-          onClick={() => setCurrentPage("home")}
+          onClick={() => {
+            stopCameraScan();
+            setCurrentPage("home");
+          }}
           className="flex items-center gap-2 text-white mb-6"
         >
           <ArrowLeft size={24} />
@@ -203,8 +243,14 @@ export default function App() {
           </p>
 
           <div className="relative mx-auto w-80 h-80 bg-black/50 rounded-3xl border-4 border-white/30 overflow-hidden mb-8">
-            <div className="absolute inset-4 border-4 border-purple-500 rounded-2xl animate-pulse"></div>
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover rounded-2xl"
+              playsInline
+              muted
+            />
+            <div className="absolute inset-4 border-4 border-purple-500 rounded-2xl animate-pulse pointer-events-none"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
               <Scan size={64} className="text-white/50" />
             </div>
           </div>
@@ -217,12 +263,20 @@ export default function App() {
             className="hidden"
           />
 
-          <button
-            onClick={handleScanQR}
-            className="bg-purple-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-purple-700 transition-all"
-          >
-            Upload QR Image
-          </button>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={startCameraScan}
+              className="bg-purple-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-purple-700 transition-all"
+            >
+              Start Camera
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-blue-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-blue-700 transition-all"
+            >
+              Upload QR Image
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -356,7 +410,12 @@ export default function App() {
         </div>
 
         <button
-          onClick={() => setCurrentPage("home")}
+          onClick={() => {
+            setCurrentPage("home");
+            setAmount("");
+            setScannedData(null);
+            setTransactionId("");
+          }}
           className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all"
         >
           Done
